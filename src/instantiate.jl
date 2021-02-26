@@ -86,16 +86,24 @@ function _instantiate_and_check(optimizer_constructor::OptimizerWithAttributes)
     return optimizer
 end
 
+function _instantiate_and_check(optimizer::AbstractOptimizer)
+    if !is_empty(optimizer)
+        error("The provided `optimizer_constructor` is a non-empty optimizer.")
+    end
+    return optimizer
+end
+
 """
-    instantiate(optimizer_constructor,
+    instantiate(optimizer_constructor;
                 with_bridge_type::Union{Nothing, Type}=nothing,
                 with_names::Bool=false)
 
-Creates an instance of optimizer either by calling
+Creates an instance of optimizer by calling
 `optimizer_constructor.optimizer_constructor()` and setting the parameters in
 `optimizer_constructor.params` if `optimizer_constructor` is a
-[`OptimizerWithAttributes`](@ref) or by calling `optimizer_constructor()`
-if `optimizer_constructor` is callable.
+[`OptimizerWithAttributes`](@ref), or by calling `optimizer_constructor()`
+if `optimizer_constructor` is callable, or by using `optimizer_constructor` if
+it is an instance of `MOI.AbstractOptimizer`.
 
 If `with_bridge_type` is not `nothing`, it enables all the bridges defined in
 the MathOptInterface.Bridges submodule with coefficient type
@@ -124,3 +132,6 @@ function instantiate(
     end
     return Bridges.full_bridge_optimizer(optimizer, with_bridge_type)
 end
+
+# Add a fallback so we don't add bridges on-top-of bridges!
+instantiate(optimizer::Bridges.LazyBridgeOptimizer; kwargs...) = optimizer
