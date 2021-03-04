@@ -109,6 +109,8 @@ abstract type AbstractModelLike{T} <: MOI.ModelLike end
 abstract type AbstractOptimizer{T} <: MOI.AbstractOptimizer end
 const AbstractModel{T} = Union{AbstractModelLike{T},AbstractOptimizer{T}}
 
+MOI.get(::AbstractModel{T}, ::MOI.CoefficientType) where {T} = T
+
 getconstrloc(model::AbstractModel, ci::CI) = model.constrmap[ci.value]
 
 # Variables

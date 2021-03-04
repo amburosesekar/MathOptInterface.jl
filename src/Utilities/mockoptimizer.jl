@@ -333,6 +333,10 @@ function MOI.get(mock::MockOptimizer, attr::MOI.AbstractModelAttribute)
     end
 end
 
+function MOI.get(mock::MockOptimizer, attr::MOI.CoefficientType)
+    return MOI.get(mock.inner_model, attr)
+end
+
 #####
 ##### Names
 #####

@@ -95,3 +95,19 @@ MOI.Utilities.@model(
     @test MOI.get(model, MOI.ConflictStatus()) == MOI.CONFLICT_FOUND
     @test_throws ArgumentError MOI.get(model, MOI.ConstraintConflictStatus(), c)
 end
+
+@testset "coefficient_type" begin
+    model = MOI.Utilities.Model{Int}()
+    @test MOI.get(model, MOI.CoefficientType()) == Int
+    mock = MOI.Utilities.MockOptimizer(model)
+    @test MOI.get(mock, MOI.CoefficientType()) == Int
+    bridge = MOI.Bridges.full_bridge_optimizer(mock, Int)
+    @test MOI.get(bridge, MOI.CoefficientType()) == Int
+    cache = MOI.Utilities.CachingOptimizer(
+        MOI.Utilities.Model{Float64}(),
+        MOI.Utilities.AUTOMATIC,
+    )
+    @test MOI.get(cache, MOI.CoefficientType()) == Float64
+    MOI.Utilities.reset_optimizer(cache, bridge)
+    @test MOI.get(cache, MOI.CoefficientType()) == Int
+end

@@ -104,6 +104,7 @@ ListOfOptimizerAttributesSet
 ListOfModelAttributesSet
 ListOfVariableAttributesSet
 ListOfConstraintAttributesSet
+CoefficientType
 ```
 
 ## Optimizers
