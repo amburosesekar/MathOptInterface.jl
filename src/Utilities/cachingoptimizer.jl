@@ -331,16 +331,25 @@ end
 
 
 """
-    _bridge_if_needed(f::Function, m::CachingOptimizer)
+    _bridge_if_needed(
+        f::Function,
+        m::CachingOptimizer;
+        add::Bool = false,
+    )
 
-Return `f(m)`, adding bridges if `f(m.optimizer)` is currently `false`, but
-after doing so, it will allow `m.optimizer` to return `f(m) == true`. If bridges
-are added, it will return `f(m) = true`, not the original `f(m) = false`.
+Return `f(m)`, under the assumption that the `.optimizer` field of `m` will be
+wrapped in a `LazyBridgeOptimizer` if `f(m)` is currently false, and that doing
+so would allow `f(m) == true`. However, only modify the `.optimizer` field if
+`add == true`.
 
 `f` is a function that takes `m` as a single argument. It is typically a call
 like `f(m) = MOI.supports_constraint(m, F, S)` for some `F` and `S`.
 """
-function _bridge_if_needed(f::Function, model::CachingOptimizer)
+function _bridge_if_needed(
+    f::Function,
+    model::CachingOptimizer;
+    add::Bool = false,
+)
     if !f(model.model_cache)
         # If the cache doesn't, we dont.
         return false
@@ -358,7 +367,9 @@ function _bridge_if_needed(f::Function, model::CachingOptimizer)
     T = MOI.get(model, MOI.CoefficientType())
     bridge = MOI.instantiate(model.optimizer; with_bridge_type = T)
     if f(bridge)
-        model.optimizer = bridge
+        if add
+            model.optimizer = bridge
+        end
         return true  # We bridged, and now we support.
     end
     return false  # Everything fails.
@@ -377,10 +388,11 @@ function MOI.add_constrained_variable(
     m::CachingOptimizer,
     set::MOI.AbstractScalarSet,
 )
-    if !MOI.supports_add_constrained_variable(m, typeof(set))
-        if state(m) == ATTACHED_OPTIMIZER
-            throw(MOI.UnsupportedConstraint{MOI.SingleVariable,typeof(set)}())
-        end
+    supports = _bridge_if_needed(m; add = true) do model
+        return MOI.supports_add_constrained_variable(model, typeof(set))
+    end
+    if !supports && state(m) == ATTACHED_OPTIMIZER
+        throw(MOI.UnsupportedConstraint{MOI.SingleVariable,typeof(set)}())
     end
     if m.state == MOIU.ATTACHED_OPTIMIZER
         if m.mode == MOIU.AUTOMATIC
@@ -434,12 +446,11 @@ function MOI.add_constrained_variables(
     m::CachingOptimizer,
     set::MOI.AbstractVectorSet,
 )
-    if !MOI.supports_add_constrained_variables(m, typeof(set))
-        if state(m) == ATTACHED_OPTIMIZER
-            throw(
-                MOI.UnsupportedConstraint{MOI.VectorOfVariables,typeof(set)}()
-            )
-        end
+    supports = _bridge_if_needed(m; add = true) do model
+        return MOI.supports_add_constrained_variables(model, typeof(set))
+    end
+    if !supports && state(m) == ATTACHED_OPTIMIZER
+        throw(MOI.UnsupportedConstraint{MOI.VectorOfVariables,typeof(set)}())
     end
     if m.state == ATTACHED_OPTIMIZER
         if m.mode == AUTOMATIC
@@ -485,10 +496,11 @@ function MOI.add_constraint(
     func::MOI.AbstractFunction,
     set::MOI.AbstractSet,
 )
-    if !MOI.supports_constraint(m, typeof(func), typeof(set))
-        if state(m) == ATTACHED_OPTIMIZER
-            throw(MOI.UnsupportedConstraint{typeof(func),typeof(set)}())
-        end
+    supports = _bridge_if_needed(m; add = true) do model
+        return MOI.supports_constraint(model, typeof(func), typeof(set))
+    end
+    if !supports && state(m) == ATTACHED_OPTIMIZER
+        throw(MOI.UnsupportedConstraint{typeof(func),typeof(set)}())
     end
     if m.state == ATTACHED_OPTIMIZER
         if m.mode == AUTOMATIC
@@ -717,12 +729,33 @@ end
 # they are sent to the optimizer and when they are returned from the optimizer.
 # As a result, values of attributes must implement `map_indices`.
 
-function MOI.set(m::CachingOptimizer, attr::MOI.AbstractModelAttribute, value)
-    if !MOI.supports(m, attr)
-        if state(m) == ATTACHED_OPTIMIZER
-            throw(MOI.UnsupportedAttribute(attr))
+function MOI.set(m::CachingOptimizer, attr::MOI.ObjectiveFunction, value)
+    supports = _bridge_if_needed(m; add = true) do model
+        return MOI.supports(model, attr)
+    end
+    if !supports && state(m) == ATTACHED_OPTIMIZER
+        throw(MOI.UnsupportedAttribute(attr))
+    end
+    if m.state == ATTACHED_OPTIMIZER
+        optimizer_value = map_indices(m.model_to_optimizer_map, value)
+        if m.mode == AUTOMATIC
+            try
+                MOI.set(m.optimizer, attr, optimizer_value)
+            catch err
+                if err isa MOI.NotAllowedError
+                    reset_optimizer(m)
+                else
+                    rethrow(err)
+                end
+            end
+        else
+            MOI.set(m.optimizer, attr, optimizer_value)
         end
     end
+    return MOI.set(m.model_cache, attr, value)
+end
+
+function MOI.set(m::CachingOptimizer, attr::MOI.AbstractModelAttribute, value)
     if m.state == ATTACHED_OPTIMIZER
         optimizer_value = map_indices(m.model_to_optimizer_map, value)
         if m.mode == AUTOMATIC
