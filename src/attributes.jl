@@ -48,6 +48,13 @@ const AnyAttribute = Union{
 Base.broadcastable(attribute::AnyAttribute) = Ref(attribute)
 
 """
+    return_type(::AnyAttribute)
+
+The return type of an attribute. Only implement this if it make sense to do so.
+"""
+return_type(::AnyAttribute) = Any
+
+"""
     struct UnsupportedAttribute{AttrType} <: UnsupportedError
         attr::AttrType
         message::String
@@ -599,6 +606,7 @@ struct CallbackNodeStatus{CallbackDataType} <: AbstractOptimizerAttribute
     callback_data::CallbackDataType
 end
 is_set_by_optimize(::CallbackNodeStatus) = true
+return_type(::CallbackNodeStatus) = CallbackNodeStatusCode
 
 ## Optimizer attributes
 
@@ -610,14 +618,15 @@ An optimizer attribute for the `Vector{AbstractOptimizerAttribute}` of all optim
 struct ListOfOptimizerAttributesSet <: AbstractOptimizerAttribute end
 
 """
-    SolverName()
+    SolverName()::String
 
 An optimizer attribute for the string identifying the solver/optimizer.
 """
 struct SolverName <: AbstractOptimizerAttribute end
+return_type(::SolverName) = String
 
 """
-    Silent()
+    Silent()::Bool
 
 An optimizer attribute for silencing the output of an optimizer. When `set`
 to `true`, it takes precedence over any other attribute controlling verbosity
@@ -636,6 +645,7 @@ value given by the user for this solver-specific parameter or `1` if none is
 given.
 """
 struct Silent <: AbstractOptimizerAttribute end
+return_type(::Silent) = Bool
 
 """
     TimeLimitSec()
@@ -812,23 +822,25 @@ attribute was set to the model.
 struct ListOfModelAttributesSet <: AbstractModelAttribute end
 
 """
-    Name()
+    Name()::String
 
 A model attribute for the string identifying the model. It has a default value
 of `""` if not set`.
 """
 struct Name <: AbstractModelAttribute end
+return_type(::Name) = String
+
+@enum OptimizationSense MIN_SENSE MAX_SENSE FEASIBILITY_SENSE
 
 """
-    ObjectiveSense()
+    ObjectiveSense()::OptimizatonSense
 
 A model attribute for the objective sense of the objective function, which
 must be an `OptimizationSense`: `MIN_SENSE`, `MAX_SENSE`, or
 `FEASIBILITY_SENSE`. The default is `FEASIBILITY_SENSE`.
 """
 struct ObjectiveSense <: AbstractModelAttribute end
-
-@enum OptimizationSense MIN_SENSE MAX_SENSE FEASIBILITY_SENSE
+return_type(::ObjectiveSense) = OptimizationSense
 
 """
     NumberOfVariables()
@@ -1008,6 +1020,7 @@ A model attribute for the [`ConflictStatusCode`](@ref) explaining why the confli
 refiner stopped when computing the conflict.
 """
 struct ConflictStatus <: AbstractModelAttribute end
+return_type(::ConflictStatus) = ConflictStatusCode
 
 ## Variable attributes
 
@@ -1021,7 +1034,7 @@ attribute was set to variables.
 struct ListOfVariableAttributesSet <: AbstractModelAttribute end
 
 """
-    VariableName()
+    VariableName()::String
 
 A variable attribute for a string identifying the variable. It is *valid* for
 two variables to have the same name; however, variables with duplicate names
@@ -1029,6 +1042,7 @@ cannot be looked up using [`get`](@ref). It has a default value of `""` if not
 set`.
 """
 struct VariableName <: AbstractVariableAttribute end
+return_type(::VariableName) = String
 
 """
     VariablePrimalStart()
@@ -1114,7 +1128,7 @@ not be included in the list even if then have been set with [`set`](@ref).
 struct ListOfConstraintAttributesSet{F,S} <: AbstractModelAttribute end
 
 """
-    ConstraintName()
+    ConstraintName()::String
 
 A constraint attribute for a string identifying the constraint. It is *valid*
 for constraints variables to have the same name; however, constraints with
@@ -1122,6 +1136,7 @@ duplicate names cannot be looked up using [`get`](@ref) regardless of if they
 have the same `F`-in-`S` type. It has a default value of `""` if not set.
 """
 struct ConstraintName <: AbstractConstraintAttribute end
+return_type(::ConstraintName) = String
 
 """
     ConstraintPrimalStart()
@@ -1170,8 +1185,7 @@ ConstraintDual() = ConstraintDual(1)
 _result_index_field(attr::ConstraintDual) = attr.N
 
 """
-    ConstraintBasisStatus(result_index)
-    ConstraintBasisStatus()
+    ConstraintBasisStatus(result_index=1)::BasisStatusCode
 
 A constraint attribute for the `BasisStatusCode` of some constraint in result
 `result_index`, with respect to an available optimal solution basis. If
@@ -1184,6 +1198,7 @@ struct ConstraintBasisStatus <: AbstractConstraintAttribute
     result_index::Int
 end
 ConstraintBasisStatus() = ConstraintBasisStatus(1)
+return_type(::ConstraintBasisStatus) = BasisStatusCode
 
 """
     CanonicalConstraintFunction()
@@ -1308,20 +1323,15 @@ Possible values are:
 )
 
 """
-    ConstraintConflictStatus()
+    ConstraintConflictStatus()::ConflictParticipationStatusCode
 
 A constraint attribute indicating whether the constraint participates
 in the conflict. Its type is [`ConflictParticipationStatusCode`](@ref).
 """
 struct ConstraintConflictStatus <: AbstractConstraintAttribute end
+return_type(::ConstraintConflictStatus) = ConflictParticipationStatusCode
 
 ## Termination status
-"""
-    TerminationStatus()
-
-A model attribute for the `TerminationStatusCode` explaining why the optimizer stopped.
-"""
-struct TerminationStatus <: AbstractModelAttribute end
 
 """
     TerminationStatusCode
@@ -1436,12 +1446,21 @@ This group of statuses means that something unexpected or problematic happened.
 )
 
 """
-    RawStatusString()
+    TerminationStatus()::TerminationStatusCode
+
+A model attribute for the `TerminationStatusCode` explaining why the optimizer stopped.
+"""
+struct TerminationStatus <: AbstractModelAttribute end
+return_type(::TerminationStatus) = TerminationStatusCode
+
+"""
+    RawStatusString()::String
 
 A model attribute for a solver specific string explaining why the optimizer
 stopped.
 """
 struct RawStatusString <: AbstractModelAttribute end
+return_type(::RawStatusString) = String
 
 ## Result status
 
@@ -1491,8 +1510,8 @@ The values indicate how to interpret the result vector.
 )
 
 """
-    PrimalStatus(N)
-    PrimalStatus()
+    PrimalStatus(N)::ResultStatusCode
+    PrimalStatus()::ResultStatusCode
 
 A model attribute for the `ResultStatusCode` of the primal result `N`.
 If `N` is omitted, it defaults to 1. If `N` is larger than the value of
@@ -1503,10 +1522,11 @@ struct PrimalStatus <: AbstractModelAttribute
 end
 PrimalStatus() = PrimalStatus(1)
 _result_index_field(attr::PrimalStatus) = attr.N
+return_type(::PrimalStatus) = ResultStatusCode
 
 """
-    DualStatus(N)
-    DualStatus()
+    DualStatus(N)::ResultStatusCode
+    DualStatus()::ResultStatusCode
 
 A model attribute for the `ResultStatusCode` of the dual result `N`.
 If `N` is omitted, it defaults to 1. If `N` is larger than the value of
@@ -1517,6 +1537,7 @@ struct DualStatus <: AbstractModelAttribute
 end
 DualStatus() = DualStatus(1)
 _result_index_field(attr::DualStatus) = attr.N
+return_type(::DualStatus) = ResultStatusCode
 
 # Cost of bridging constrained variable in S
 struct VariableBridgingCost{S<:AbstractSet} <: AbstractModelAttribute end
