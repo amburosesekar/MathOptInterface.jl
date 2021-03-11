@@ -618,7 +618,7 @@ An optimizer attribute for the `Vector{AbstractOptimizerAttribute}` of all optim
 struct ListOfOptimizerAttributesSet <: AbstractOptimizerAttribute end
 
 """
-    SolverName()::String
+    SolverName()
 
 An optimizer attribute for the string identifying the solver/optimizer.
 """
@@ -626,7 +626,7 @@ struct SolverName <: AbstractOptimizerAttribute end
 return_type(::SolverName) = String
 
 """
-    Silent()::Bool
+    Silent()
 
 An optimizer attribute for silencing the output of an optimizer. When `set`
 to `true`, it takes precedence over any other attribute controlling verbosity
@@ -822,7 +822,7 @@ attribute was set to the model.
 struct ListOfModelAttributesSet <: AbstractModelAttribute end
 
 """
-    Name()::String
+    Name()
 
 A model attribute for the string identifying the model. It has a default value
 of `""` if not set`.
@@ -833,7 +833,7 @@ return_type(::Name) = String
 @enum OptimizationSense MIN_SENSE MAX_SENSE FEASIBILITY_SENSE
 
 """
-    ObjectiveSense()::OptimizatonSense
+    ObjectiveSense()
 
 A model attribute for the objective sense of the objective function, which
 must be an `OptimizationSense`: `MIN_SENSE`, `MAX_SENSE`, or
@@ -1034,7 +1034,7 @@ attribute was set to variables.
 struct ListOfVariableAttributesSet <: AbstractModelAttribute end
 
 """
-    VariableName()::String
+    VariableName()
 
 A variable attribute for a string identifying the variable. It is *valid* for
 two variables to have the same name; however, variables with duplicate names
@@ -1128,7 +1128,7 @@ not be included in the list even if then have been set with [`set`](@ref).
 struct ListOfConstraintAttributesSet{F,S} <: AbstractModelAttribute end
 
 """
-    ConstraintName()::String
+    ConstraintName()
 
 A constraint attribute for a string identifying the constraint. It is *valid*
 for constraints variables to have the same name; however, constraints with
@@ -1185,7 +1185,7 @@ ConstraintDual() = ConstraintDual(1)
 _result_index_field(attr::ConstraintDual) = attr.N
 
 """
-    ConstraintBasisStatus(result_index=1)::BasisStatusCode
+    ConstraintBasisStatus(result_index=1)
 
 A constraint attribute for the `BasisStatusCode` of some constraint in result
 `result_index`, with respect to an available optimal solution basis. If
@@ -1323,7 +1323,7 @@ Possible values are:
 )
 
 """
-    ConstraintConflictStatus()::ConflictParticipationStatusCode
+    ConstraintConflictStatus()
 
 A constraint attribute indicating whether the constraint participates
 in the conflict. Its type is [`ConflictParticipationStatusCode`](@ref).
@@ -1446,7 +1446,7 @@ This group of statuses means that something unexpected or problematic happened.
 )
 
 """
-    TerminationStatus()::TerminationStatusCode
+    TerminationStatus()
 
 A model attribute for the `TerminationStatusCode` explaining why the optimizer stopped.
 """
@@ -1454,7 +1454,7 @@ struct TerminationStatus <: AbstractModelAttribute end
 return_type(::TerminationStatus) = TerminationStatusCode
 
 """
-    RawStatusString()::String
+    RawStatusString()
 
 A model attribute for a solver specific string explaining why the optimizer
 stopped.
@@ -1510,8 +1510,8 @@ The values indicate how to interpret the result vector.
 )
 
 """
-    PrimalStatus(N)::ResultStatusCode
-    PrimalStatus()::ResultStatusCode
+    PrimalStatus(N)
+    PrimalStatus()
 
 A model attribute for the `ResultStatusCode` of the primal result `N`.
 If `N` is omitted, it defaults to 1. If `N` is larger than the value of
@@ -1525,8 +1525,8 @@ _result_index_field(attr::PrimalStatus) = attr.N
 return_type(::PrimalStatus) = ResultStatusCode
 
 """
-    DualStatus(N)::ResultStatusCode
-    DualStatus()::ResultStatusCode
+    DualStatus(N)
+    DualStatus()
 
 A model attribute for the `ResultStatusCode` of the dual result `N`.
 If `N` is omitted, it defaults to 1. If `N` is larger than the value of

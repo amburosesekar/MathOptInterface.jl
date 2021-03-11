@@ -756,7 +756,7 @@ function MOI.get(
                 model.optimizer,
                 attr,
                 map(index -> model.model_to_optimizer_map[index], indices),
-            )::Vector{MOI.return_type(attr)},
+            )::Vector{<:MOI.return_type(attr)},
         )
     else
         return MOI.get(model.model_cache, attr, indices)
@@ -901,7 +901,7 @@ function MOI.get(
             m.optimizer,
             attr.attr,
             getindex.(m.model_to_optimizer_map, idx),
-        )::Vector{MOI.return_type(attr.attr)},
+        )::Vector{<:MOI.return_type(attr.attr)},
     )
 end
 
